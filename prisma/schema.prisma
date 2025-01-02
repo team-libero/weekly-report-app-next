@@ -1,0 +1,165 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 部署マスタ
+model Department {
+  id        String    @id @db.Char(1) @map("DEPARTMENT_ID")
+  name      String    @db.VarChar(20) @map("DEPARTMENT_NAME")
+  employees Employee[]
+
+  @@map("DEPARTMENT_MST")
+}
+
+// チームマスタ
+model Team {
+  id        String    @id @db.Char(5) @map("TEAM_ID")
+  name      String    @db.VarChar(50) @map("TEAM_NAME")
+  unitNo    String    @db.Char(1) @map("UNIT_NO")
+  employees Employee[]
+
+  @@map("TEAM_MST")
+}
+
+// 社員マスタ
+model Employee {
+  id            String    @id @db.VarChar(10) @map("EMP_ID")
+  departmentId  String    @db.Char(1) @map("DEPARTMENT_ID")
+  teamId        String?   @db.Char(5) @map("TEAM_ID")
+  empNo         String?   @db.Char(4) @map("EMP_NO")
+  role          String    @db.Char(1) @map("ROLE") @default("0")
+  lastName      String    @db.VarChar(10) @map("EMP_LNAME")
+  firstName     String    @db.VarChar(10) @map("EMP_FNAME")
+  lastNameKana  String    @db.VarChar(20) @map("EMP_LNAME_KANA")
+  firstNameKana String    @db.VarChar(20) @map("EMP_FNAME_KANA")
+  gender        String    @db.Char(1) @map("GENDER")
+  birthday      DateTime? @db.Date @map("BIRTHDAY")
+  startDate     DateTime? @db.Date @map("START_DATE")
+  belong        String    @db.Char(1) @map("BELONG")
+  status        String    @db.Char(1) @map("EMP_STATUS") @default("0")
+  changeDate    DateTime? @db.Date @map("CHANGE_DATE")
+  mailAddress   String?   @db.VarChar(100) @map("MAIL_ADDRESS")
+
+  department    Department @relation(fields: [departmentId], references: [id])
+  team          Team?      @relation(fields: [teamId], references: [id])
+  user          User?
+
+  weeklyReports          WeeklyReport[] @relation("EmployeeWeeklyReports")
+  managedWeeklyReports   WeeklyReport[] @relation("LeaderWeeklyReports")
+  salesWeeklyReports     WeeklyReport[] @relation("SalesWeeklyReports")
+
+  @@map("EMPLOYEE_MST")
+}
+
+// ユーザーマスタ
+model User {
+  id        String   @id @db.VarChar(10) @map("EMP_ID")
+  loginId   String   @db.VarChar(20) @map("LOGIN_ID")
+  password  String   @db.VarChar(20) @map("PASSWORD")
+  employee  Employee @relation(fields: [id], references: [id])
+
+  @@map("LOGIN")
+}
+
+enum Role {
+  DEFAULT @map("0")
+  ROLE_1  @map("1")
+  ROLE_2  @map("2")
+  ROLE_C  @map("3")
+  ROLE_LD @map("4")
+  ROLE_MGR @map("5")
+}
+
+enum Gender {
+  MALE   @map("1")
+  FEMALE @map("2")
+}
+
+enum UnitNo {
+  UNIT_1 @map("1")
+  UNIT_2 @map("2")
+}
+
+enum Belong {
+  ARCHI_CORE   @map("1")
+  DIVERSE      @map("4")
+  AB_SYSTEMS   @map("8")
+}
+
+enum EmpStatus {
+  DEFAULT     @map("0")
+  REGULAR     @map("1")
+  PROBATION   @map("2")
+  RETIRED     @map("9")
+}
+
+model WeeklyReport {
+  id                        Int       @id @default(autoincrement()) @map("WEEKLY_REPORT_ID")
+  employeeId               String    @db.VarChar(10) @map("EMP_ID")
+  leaderEmployeeId         String    @db.VarChar(10) @map("LEADER_EMP_ID")
+  userCompanyName          String?   @db.VarChar(100) @map("USER_COMPANY_NAME")
+  primeContractorName      String?   @db.VarChar(100) @map("PRIME_CONTRACTOR_NAME")
+  onsiteAddress           String    @db.VarChar(200) @map("ONSITE_ADDRESS")
+  fixedTime               String    @db.VarChar(100) @map("FIXED_TIME")
+  salesEmployeeId         String    @db.VarChar(10) @map("SALES_EMP_ID")
+  periodStartDate         DateTime  @db.Date @map("PERIOD_START_DATE")
+  periodEndDate           DateTime  @db.Date @map("PERIOD_END_DATE")
+  sourceOfSalesInfo       String?   @db.VarChar(100) @map("SOURCE_OF_SALES_INFO")
+  howToCollectSalesInfo   String?   @db.VarChar(100) @map("HOW_TO_COLLECT_SALES_INFO")
+  salesInfo               String?   @db.Text @map("SALES_INFO")
+  averageOvertime         String    @db.VarChar(10) @map("AVG_OVERTIME")
+  workContent             String    @db.VarChar(100) @map("WORK_CONTENT")
+  minimumWorkTime         Decimal   @db.Decimal(3,0) @map("MINIMUN_WORK_TIME")
+  reachability           String    @db.Char(1) @map("REACHABILITY")
+  progress               String    @db.Char(1) @map("PROGRESS")
+  physicalCondition      String    @db.Char(1) @map("PHYSICAL_CONDITION")
+  relationship           String    @db.Char(1) @map("RELATIONSHIP")
+  failurePointedOut      String?   @db.Text @map("FAILURE_POINTED_OUT")
+  impression             String    @db.Text @map("IMPRESSION")
+  difficultyLevel        Decimal?  @db.Decimal(3,0) @map("DIFFICULTY_LEVEL")
+  senseOfSchedule        Decimal?  @db.Decimal(3,0) @map("SENCE_OF_SCHEDULE")
+  situationOfOtherEmployees String? @db.Text @map("SITUATION_OF_OTHER_EMPLOYEES")
+
+  // リレーション定義
+  employee      Employee    @relation("EmployeeWeeklyReports", fields: [employeeId], references: [id])
+  leader        Employee    @relation("LeaderWeeklyReports", fields: [leaderEmployeeId], references: [id])
+  salesPerson   Employee    @relation("SalesWeeklyReports", fields: [salesEmployeeId], references: [id])
+
+  // 列挙型を使用するフィールドの制約
+  @@map("WEEKLY_REPORT")
+}
+
+// 列挙型の定義
+enum Reachability {
+  REACHABLE    @map("1")
+  UNREACHABLE  @map("2")
+}
+
+enum Progress {
+  GOOD    @map("1")
+  NORMAL  @map("2")
+  BAD     @map("3")
+}
+
+enum PhysicalCondition {
+  GOOD    @map("1")
+  NORMAL  @map("2")
+  BAD     @map("3")
+}
+
+enum Relationship {
+  GOOD    @map("1")
+  NORMAL  @map("2")
+  BAD     @map("3")
+}
